@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="@dimen/activity_horizontal_margin"
+    >
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/rule_thickness"
+        android:background="@color/rule_color"
+        android:id="@+id/rule"
+        android:layout_marginBottom="@dimen/rule_thickness"
+        android:layout_marginTop="@dimen/rule_thickness"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:id="@+id/left_text_main"
+        android:text="Steve's Daily Mileage"
+        android:textSize="18dp"
+        android:layout_below="@+id/rule"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_alignParentRight="true"
+        android:id="@+id/right_text"
+        android:textSize="18dp"
+        android:text="1659"
+        android:layout_below="@id/rule"
+        />
+</RelativeLayout>
