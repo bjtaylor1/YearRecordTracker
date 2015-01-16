@@ -8,5 +8,11 @@
     <string name="refresh">Refresh</string>
     <string name="refreshing">Refreshing data...</string>
     <string name="getdatafailed">Get data failed. Please try again later.</string>
+    <string name="title_activity_map">MapActivity</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="where_is_he_now">Where is he now?</string>
+    <string name="error_refreshing">Error refreshing... sorry!</string>
+    <string name="error_nodata">Refresh failed - no data received. Wifi signin required?</string>
+    <string name="no_change">(no change)</string>
 
 </resources>

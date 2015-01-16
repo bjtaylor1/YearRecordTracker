@@ -1,8 +1,11 @@
 package com.bjt.yearrecordtracker.app;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,9 +14,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,6 +29,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 
@@ -32,32 +42,51 @@ public class MainActivity extends Activity implements UpdateDataItemResults {
     private boolean refreshing;
     private MenuItem refreshButton;
     private static final String CACHED_DATA = "cached_data";
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        progressDialog = new ProgressDialog(this);
+
         data_list = (ListView) findViewById(R.id.data_list);
         list_adapter = new ArrayAdapter<DataItemResult>(this, android.R.layout.simple_list_item_1) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 LayoutInflater layoutInflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                View rowView = layoutInflater.inflate(R.layout.left_right_text, parent, false);
-                TextView left = (TextView) rowView.findViewById(R.id.left_text_main);
-                TextView right = (TextView)rowView.findViewById(R.id.right_text);
                 DataItemResult dataItemResult = this.getItem(position);
-                left.setText(dataItemResult.getKey());
-                right.setText(dataItemResult.getResult());
-                View rule = rowView.findViewById(R.id.rule);
-                if(dataItemResult.getResult() == null || dataItemResult.getKey().equals("Refreshed at")) {
-                    rule.setVisibility(View.VISIBLE);
-                    left.setTypeface(Typeface.DEFAULT_BOLD);
+                if(dataItemResult.getKey().equals("map")) {
+                    View rowView = layoutInflater.inflate(R.layout.mapbutton, parent, false);
+                    Button button = (Button) rowView.findViewById(R.id.where_is_he_now);
+                    button.setTag(dataItemResult.getResult());
+                    button.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            String url = (String) view.getTag();
+                            Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+                            intent.putExtra("url", url);
+                            startActivity(intent);
+                        }
+                    });
+                    return rowView;
                 } else {
-                    rule.setVisibility(View.GONE);
+                    View rowView = layoutInflater.inflate(R.layout.left_right_text, parent, false);
+                    TextView left = (TextView) rowView.findViewById(R.id.left_text_main);
+                    TextView right = (TextView)rowView.findViewById(R.id.right_text);
+                    left.setText(dataItemResult.getKey());
+                    right.setText(dataItemResult.getResult());
+                    View rule = rowView.findViewById(R.id.rule);
+                    if (dataItemResult.getResult() == null || dataItemResult.getKey().equals("Refreshed at")) {
+                        rule.setVisibility(View.VISIBLE);
+                        left.setTypeface(Typeface.DEFAULT_BOLD);
+                    } else {
+                        rule.setVisibility(View.GONE);
 
+                    }
+                    return rowView;
                 }
-                return rowView;
             }
         };
         data_list.setAdapter(list_adapter);
@@ -113,6 +142,65 @@ public class MainActivity extends Activity implements UpdateDataItemResults {
             refreshButton.setEnabled(true);
         }
     }
+
+    public class GetDataTask extends AsyncTask<DataItem, Void, List<DataItemResult>> {
+
+        private final Context activity;
+        private final UpdateDataItemResults updateDataItemResults;
+
+        public GetDataTask(Context activity, UpdateDataItemResults updateDataItemResults) {
+            this.activity = activity;
+            this.updateDataItemResults = updateDataItemResults;
+
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progressDialog.setMessage(activity.getResources().getString(R.string.refreshing));
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progressDialog.show();
+
+        }
+
+        @Override
+        protected void onPostExecute(List<DataItemResult> dataItemResults) {
+            super.onPostExecute(dataItemResults);
+            updateDataItemResults.updateDataItemResults(dataItemResults);
+            progressDialog.hide();
+        }
+
+        @Override
+        protected List<DataItemResult> doInBackground(DataItem... dataItems) {
+            List<DataItemResult> results = new ArrayList<DataItemResult>();
+
+            final DataItemResult refreshedAtResult = new DataItemResult("Refreshed at");
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd MMM HH:mm");
+            refreshedAtResult.setResult(simpleDateFormat.format(new Date()));
+            results.add(refreshedAtResult);
+
+            for (DataItem dataItem : dataItems) {
+                DataItemResult dataItemResult = new DataItemResult(dataItem.getKey());
+                if(dataItemResult.getKey().equals("map")) {
+                    dataItemResult.setResult(dataItem.getUrl());
+                } else {
+                    if (dataItem.getUrl() != null && dataItem.getParser() != null) {
+                        try {
+                            Document doc = Jsoup.connect(dataItem.getUrl()).get();
+                            dataItemResult.setResult(dataItem.getParser().getResult(doc));
+                        } catch (Exception e) {
+                            dataItemResult.setResult("(errored)");
+                        }
+                    }
+                }
+                results.add(dataItemResult);
+            }
+
+            return results;
+        }
+
+    }
+
 
     @Override
     public void updateDataItemResults(List<DataItemResult> dataItemResults) {
